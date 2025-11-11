@@ -1,0 +1,18 @@
+# Rust
+target/
+**/Cargo.lock
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Node/Nuxt
+node_modules/
+.nuxt/
+.next/
+dist/
+
+# General
+.env
