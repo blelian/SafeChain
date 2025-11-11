@@ -1,18 +1,62 @@
+# --------------------
 # Rust
+# --------------------
 target/
 **/Cargo.lock
 
+# --------------------
 # Python
+# --------------------
 venv/
 __pycache__/
 *.py[cod]
 *.pyo
-
-# Node/Nuxt
-node_modules/
-.nuxt/
-.next/
-dist/
-
-# General
+*.pyd
+*.sqlite3
 .env
+.env.*
+
+# --------------------
+# Node / Next.js / Capacitor
+# --------------------
+node_modules/
+.next/
+out/
+dist/
+build/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Capacitor / Cordova / Mobile
+android/
+ios/
+www/
+capacitor.config.ts
+capacitor.config.json
+plugins/
+*.keystore
+
+# --------------------
+# IDE / Editor
+# --------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --------------------
+# OS generated files
+# --------------------
+Thumbs.db
+Desktop.ini
+*.DS_Store
+*.swp
+*.swo
+
+# --------------------
+# Logs
+# --------------------
+*.log
