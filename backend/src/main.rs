@@ -10,10 +10,10 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // Initialize database pool
-    let _pool = db::get_db_pool().await;
+    let pool = db::get_db_pool().await;
 
-    // Combine all routes
-    let app = Router::new().merge(routes::api::create_router());
+    // Build the app from the router that expects a PgPool, and attach the actual pool.
+    let app = routes::api::create_router().with_state(pool);
 
     // Bind to address
     let listener = TcpListener::bind("0.0.0.0:8000")
@@ -22,7 +22,7 @@ async fn main() {
 
     println!("🚀 Server running on http://localhost:8000");
 
-    // Start the server using the new Axum 0.7 API
+    // Start the server using Axum 0.7 API
     axum::serve(listener, app)
         .await
         .expect("Server failed");
