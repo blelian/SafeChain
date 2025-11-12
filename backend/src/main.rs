@@ -1,4 +1,3 @@
-use axum::Router;
 use tokio::net::TcpListener;
 use tracing_subscriber;
 
@@ -12,8 +11,8 @@ async fn main() {
     // Initialize database pool
     let pool = db::get_db_pool().await;
 
-    // Build the app from the router that expects a PgPool, and attach the actual pool.
-    let app = routes::api::create_router().with_state(pool);
+    // Build the app (routes::create_router returns Router<PgPool>) and attach pool
+    let app = routes::create_router().with_state(pool);
 
     // Bind to address
     let listener = TcpListener::bind("0.0.0.0:8000")
