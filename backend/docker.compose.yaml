@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    container_name: safechain-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: safechain
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  rust-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: safechain-rust
+    depends_on:
+      - postgres
+      - ai-service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/safechain
+      JWT_SECRET: "supersecret_change_me"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  ai-service:
+    build:
+      context: ./backend/ai-service
+      dockerfile: Dockerfile
+    container_name: safechain-ai
+    depends_on:
+      - postgres
+    environment:
+      # if your ai service needs DB or other secrets, set here
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./backend/ai-service/app:/app/app
+      # mount model file if you prefer using host model (optional)
+      # - ./backend/ai-service/model.pt:/app/model.pt
+
+volumes:
+  postgres_data:

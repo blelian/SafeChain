@@ -1,15 +1,19 @@
-use axum::{Router, routing::get, extract::State};
-use sqlx::PgPool;
+use axum::{Router, routing::get};
 
-/// Router for the / API routes. Returns Router<PgPool>.
-pub fn create_router() -> Router<PgPool> {
-    Router::<PgPool>::new()
-        .route("/", get(root_handler))
+/// Very simple API router.
+/// No database, no state, nothing complicated.
+pub fn create_router() -> Router {
+    Router::new()
+        .route("/", get(api_root))
+        .route("/ping", get(api_ping))
 }
 
-async fn root_handler(State(pool): State<PgPool>) -> String {
-    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&pool).await {
-        Ok(val) => format!("Hello SafeChain! Test query result: {}", val),
-        Err(e) => format!("DB query error: {}", e),
-    }
+/// GET /api
+async fn api_root() -> &'static str {
+    "API root OK"
+}
+
+/// GET /api/ping
+async fn api_ping() -> &'static str {
+    "API Pong!"
 }
