@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from app.routes import api, infer, auth, password, phishing, anomaly, audit, events
-from app.services import model_loader  # updated import (module loads models)
+from app.services import model_loader  # module loads models
 from app.db import engine, Base
 
 # Load environment variables
@@ -21,21 +21,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# ---------- CORS (allow frontend) ----------
+# ---------- CORS ----------
+# Allow local dev and your Vercel frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:4000", "http://localhost:5173", "http://localhost:3001", "http://localhost:3002", "*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://safe-chain-coral.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# -------------------------------------------------
+# --------------------------
 
-# Startup event: ensure models are loaded (model_loader imports handle loading)
+# Startup event: ensure models are loaded
 @app.on_event("startup")
 async def startup_event():
     try:
-        # Access attributes to ensure module loaded; they print their own status
         pm = getattr(model_loader, "password_model", None)
         ph = getattr(model_loader, "phishing_model", None)
         print(f"ℹ️ Password model loaded? {'yes' if pm is not None else 'no'}")
