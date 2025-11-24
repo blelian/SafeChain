@@ -157,7 +157,7 @@ export default function InferPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex gap-3 justify-center">
+        <div className="mt-6 flex flex-wrap gap-3 justify-center">
           <button
             onClick={() => {
               setPassword("");

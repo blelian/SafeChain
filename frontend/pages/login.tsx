@@ -45,46 +45,49 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold text-emerald-400 mb-4">Login / Register</h1>
 
         <form onSubmit={handleSubmit} className="w-full">
+          {/* Email */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3">
             <label className="md:col-span-3 md:text-right text-sm text-gray-300">Email</label>
-            <div className="md:col-span-9">
+            <div className="md:col-span-9 min-w-0">
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none min-w-0"
                 required
               />
             </div>
           </div>
 
+          {/* Password */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3">
             <label className="md:col-span-3 md:text-right text-sm text-gray-300">Password</label>
-            <div className="md:col-span-9">
+            <div className="md:col-span-9 min-w-0">
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none min-w-0"
                 required
               />
             </div>
           </div>
 
+          {/* Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-4">
-            <div className="md:col-start-4 md:col-span-9 flex flex-col md:flex-row gap-3">
+            <div className="md:col-start-4 md:col-span-9 flex flex-col sm:flex-row gap-3">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 w-full md:w-auto py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold transition-all disabled:opacity-50"
+                className="flex-1 w-full sm:w-auto py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold transition-all disabled:opacity-50"
               >
                 {loading ? "Logging in..." : "Login"}
               </button>
               <button
                 type="button"
-                disabled={loading}
                 onClick={handleRegister}
-                className="flex-1 w-full md:w-auto py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all disabled:opacity-50"
+                disabled={loading}
+                className="flex-1 w-full sm:w-auto py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all disabled:opacity-50"
               >
                 {loading ? "Registering..." : "Register"}
               </button>
