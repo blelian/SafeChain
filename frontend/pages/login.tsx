@@ -3,22 +3,25 @@ import { authClient } from "../lib/authClient";
 import { useRouter } from "next/router";
 
 export default function LoginPage() {
+  console.log("LoginPage — v3 loaded");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Redirect if already logged in
   useEffect(() => {
     if (typeof window !== "undefined" && authClient.getToken()) {
       router.push("/infer");
     }
-  }, []);
+  }, [router]);
 
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
-    const { success, message } = await authClient.login(email, password) as any;
+    const { success, message } = (await authClient.login(email, password)) as any;
     setLoading(false);
     if (success) router.push("/infer");
     else setError(message || "Login failed");
@@ -27,7 +30,7 @@ export default function LoginPage() {
   const handleRegister = async () => {
     setLoading(true);
     setError(null);
-    const { success, message } = await authClient.register(email, password) as any;
+    const { success, message } = (await authClient.register(email, password)) as any;
     setLoading(false);
     if (success) await handleLogin();
     else setError(message || "Registration failed (maybe email already exists)");
@@ -40,7 +43,7 @@ export default function LoginPage() {
 
   return (
     <div className="page-container bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-800 p-4 min-h-screen flex items-center justify-center">
-      <div className="card max-w-md w-full p-8 space-y-6 text-center">
+      <div className="card max-w-md w-full p-8 space-y-6 text-center overflow-hidden break-words">
         <button
           onClick={() => router.push("/")}
           className="text-sm text-emerald-300 hover:underline mb-2 self-start"
@@ -59,7 +62,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full min-w-0 box-border p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                className="w-full min-w-0 box-border p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none break-words"
                 required
               />
             </div>
@@ -73,7 +76,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full min-w-0 box-border p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                className="w-full min-w-0 box-border p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none break-words"
                 required
               />
             </div>
@@ -81,7 +84,7 @@ export default function LoginPage() {
 
           {/* Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-4">
-            <div className="md:col-start-4 md:col-span-9 flex flex-col sm:flex-row gap-3">
+            <div className="md:col-start-4 md:col-span-9 flex flex-col sm:flex-row gap-3 w-full">
               <button
                 type="submit"
                 disabled={loading}
@@ -100,9 +103,10 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* Error */}
           {error && (
             <div className="mt-4 text-center">
-              <p className="text-red-500">{error}</p>
+              <p className="text-red-500 break-words">{error}</p>
             </div>
           )}
         </form>
