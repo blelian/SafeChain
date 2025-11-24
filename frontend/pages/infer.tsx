@@ -1,4 +1,5 @@
-import { useState } from "react";
+// frontend/pages/infer.tsx
+import { useState, useEffect } from "react";
 import { authClient } from "../lib/authClient";
 
 type BackendResult = {
@@ -9,6 +10,11 @@ type BackendResult = {
 };
 
 export default function InferPage() {
+  // tiny marker so you can verify the deployed bundle in the browser console
+  useEffect(() => {
+    console.log("InferPage — deployed bundle");
+  }, []);
+
   const [password, setPassword] = useState("");
   const [result, setResult] = useState<BackendResult | null>(null);
   const [loading, setLoading] = useState(false);

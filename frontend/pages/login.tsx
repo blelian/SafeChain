@@ -1,30 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authClient } from "../lib/authClient";
 import { useRouter } from "next/router";
 
 export default function LoginPage() {
+  console.log("LoginPage — v2 loaded"); // marker to confirm deployed bundle
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // optional: if user already logged in, redirect (keeps behaviour)
+  useEffect(() => {
+    if (typeof window !== "undefined" && authClient.getToken()) {
+      router.push("/infer");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
-    const success = await authClient.login(email, password);
+    const { success, message } = await authClient.login(email, password) as any;
     setLoading(false);
-    if (success) router.push("/infer");
-    else setError("Login failed");
+    if (success || success === true) router.push("/infer");
+    else setError(message || "Login failed");
   };
 
   const handleRegister = async () => {
     setLoading(true);
     setError(null);
-    const success = await authClient.register(email, password);
+    const { success, message } = await authClient.register(email, password) as any;
     setLoading(false);
     if (success) await handleLogin();
-    else setError("Registration failed (maybe email already exists)");
+    else setError(message || "Registration failed (maybe email already exists)");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
