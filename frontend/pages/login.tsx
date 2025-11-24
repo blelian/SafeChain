@@ -1,3 +1,4 @@
+// frontend/pages/login.tsx
 import { useState } from "react";
 import { authClient } from "../lib/authClient";
 import { useRouter } from "next/router";
@@ -11,22 +12,15 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setError(null);
     const success = await authClient.login(email, password);
-    if (success) {
-      router.push("/infer");
-    } else {
-      setError("Login failed");
-    }
+    if (success) router.push("/infer");
+    else setError("Login failed");
   };
 
   const handleRegister = async () => {
     setError(null);
     const success = await authClient.register(email, password);
-    if (success) {
-      // Auto-login after registration
-      await handleLogin();
-    } else {
-      setError("Registration failed (maybe email already exists)");
-    }
+    if (success) await handleLogin();
+    else setError("Registration failed (maybe email already exists)");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,25 +29,72 @@ export default function LoginPage() {
   };
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Login / Register</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email</label><br/>
-          <input value={email} onChange={e => setEmail(e.target.value)} />
-        </div>
-        <div style={{ marginTop: 8 }}>
-          <label>Password</label><br/>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <button type="submit">Login</button>
-          <button type="button" onClick={handleRegister} style={{ marginLeft: 8 }}>
-            Register
-          </button>
-        </div>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-      </form>
-    </main>
+    <div className="page-container bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-800 p-4">
+      <div className="card max-w-md w-full p-8 space-y-6 text-center">
+        {/* Homepage Link */}
+        <button
+          onClick={() => router.push("/")}
+          className="text-sm text-emerald-300 hover:underline mb-2 self-start"
+        >
+          ← Back to Homepage
+        </button>
+
+        <h1 className="text-2xl font-bold text-emerald-400 mb-4">Login / Register</h1>
+
+        <form onSubmit={handleSubmit} className="w-full">
+          {/* Grid rows: single column on small screens, 12-cols on md+ */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3">
+            <label className="md:col-span-3 md:text-right text-sm text-gray-300">Email</label>
+            <div className="md:col-span-9">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3">
+            <label className="md:col-span-3 md:text-right text-sm text-gray-300">Password</label>
+            <div className="md:col-span-9">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Buttons row aligned to input column on md+ screens */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-4">
+            <div className="md:col-start-4 md:col-span-9 flex flex-col md:flex-row gap-3">
+              <button
+                type="submit"
+                className="flex-1 w-full md:w-auto py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold transition-all"
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={handleRegister}
+                className="flex-1 w-full md:w-auto py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all"
+              >
+                Register
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-4 text-center">
+              <p className="text-red-500">{error}</p>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }

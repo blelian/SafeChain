@@ -2,8 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
-/* optional global styles */
+/* -----------------------------
+   Global body and font
+----------------------------- */
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(135deg, #0f172a, #064e3b); /* dark-futuristic green */
+  color: #d1fae5; /* light green/emerald */
+  overflow-x: hidden;
+}
+
+/* -----------------------------
+   Password strength colors
+----------------------------- */
+.strength-weak {
+  background-color: #f87171; /* red */
+  transition: background-color 0.5s ease, box-shadow 0.5s ease;
+  box-shadow: 0 0 8px #f87171;
+}
+
+.strength-medium {
+  background-color: #facc15; /* yellow */
+  transition: background-color 0.5s ease, box-shadow 0.5s ease;
+  box-shadow: 0 0 8px #facc15;
+}
+
+.strength-strong {
+  background-color: #34d399; /* emerald green */
+  transition: background-color 0.5s ease, box-shadow 0.5s ease;
+  box-shadow: 0 0 8px #34d399;
+}
+
+/* -----------------------------
+   Animated gradient background (futuristic vibe)
+----------------------------- */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.bg-futuristic {
+  background: linear-gradient(270deg, #0f172a, #064e3b, #10b981, #047857);
+  background-size: 800% 800%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* -----------------------------
+   Floating particle effect
+----------------------------- */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: float 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes float {
+  0% { transform: translateY(0) translateX(0); opacity: 0.3; }
+  50% { transform: translateY(-50px) translateX(30px); opacity: 0.6; }
+  100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+}
+
+/* -----------------------------
+   Input & button enhancements
+----------------------------- */
+input, button {
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+input:focus {
+  outline: none;
+  box-shadow: 0 0 10px #34d399;
+  border: 2px solid #34d399;
+}
+
+button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px #10b981;
+}
+
+/* -----------------------------
+   Utility for centered flex layout
+----------------------------- */
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* -----------------------------
+   Card style (for infer results, login box, etc)
+----------------------------- */
+.card {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #10b981;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 0 15px #10b981;
+  backdrop-filter: blur(10px);
+  color: #d1fae5;
+  max-width: 400px;
+  width: 100%;
+  margin: auto;
+}
+
+/* -----------------------------
+   Responsive utilities
+----------------------------- */
+@media (max-width: 768px) {
+  .card {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  input, button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+/* Ensure the html/body take full height */
+html, body, #__next {
+  height: 100%;
+}
+
+/* Center all direct page content */
+.page-container {
+  @apply flex flex-col justify-center items-center min-h-full;
+  text-align: center;
+  padding: 1rem;
 }

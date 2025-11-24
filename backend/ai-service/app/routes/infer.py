@@ -1,80 +1,63 @@
 # backend/ai-service/app/routes/infer.py
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
-from typing import List
-import torch
-import jwt
-from app import config
+from fastapi import APIRouter, Depends, HTTPException, Header
+from app.schemas.infer import InferRequest, InferResponse
 from app.services.ai_service import get_model
+from app.services.model_loader import MODEL_INPUT_SIZE
+import torch
 
 router = APIRouter()
-security = HTTPBearer()
 
-# ---------------------
-# Request/Response schemas
-# ---------------------
-class InferRequest(BaseModel):
-    input: List[float]
+# Simple token dependency — adjust to decode/verify JWT if you want full auth
+def verify_token(authorization: str | None = Header(None)) -> str:
+    """
+    Minimal check: expects header 'Authorization: Bearer <token>'.
+    Replace with proper JWT verification if desired.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    token = authorization.split(" ", 1)[1]
+    return token
 
-class InferResponse(BaseModel):
-    prediction: List[float]
-
-# ---------------------
-# Helper: verify JWT
-# ---------------------
-def verify_token(creds: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    token = creds.credentials
-    try:
-        payload = jwt.decode(token, config.JWT_SECRET, algorithms=["HS256"])
-        sub = payload.get("sub") or payload.get("email")
-        return sub
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-# ---------------------
-# Route: inference
-# ---------------------
 @router.post("/", response_model=InferResponse)
 def infer(req: InferRequest, subject: str = Depends(verify_token)):
-    MODEL = get_model()  # Get the model via ai_service
+    MODEL = get_model()
 
-    # Determine expected input size robustly
-    expected_input_size = None
+    # Determine expected input size (robust to different model shapes)
     try:
         if hasattr(MODEL, "linear") and hasattr(MODEL.linear, "in_features"):
             expected_input_size = int(MODEL.linear.in_features)
         elif hasattr(MODEL, "in_features"):
             expected_input_size = int(MODEL.in_features)
         else:
-            expected_input_size = int(config.MODEL_INPUT_SIZE)
+            expected_input_size = int(MODEL_INPUT_SIZE)
     except Exception:
-        expected_input_size = int(config.MODEL_INPUT_SIZE)
+        expected_input_size = int(MODEL_INPUT_SIZE)
 
+    # Debug prints (visible in uvicorn logs)
+    print("DEBUG — User input length:", len(req.input))
+    print("DEBUG — Expected size:", expected_input_size)
+
+    # Validate size
     if len(req.input) != expected_input_size:
         raise HTTPException(
             status_code=400,
-            detail=f"Input must be a list of {expected_input_size} numbers"
+            detail={
+                "error": "Wrong input size",
+                "given": len(req.input),
+                "expected": expected_input_size
+            }
         )
 
-    # Convert input to tensor
+    # Convert input to tensor and run model
     x = torch.tensor([req.input], dtype=torch.float32)
-
     with torch.no_grad():
         y = MODEL(x)
 
-    # Convert output to list of floats
+    # Normalize output to a list of floats
     if isinstance(y, torch.Tensor):
         out = y.squeeze().cpu().tolist()
-    elif isinstance(y, (float, int)):
-        out = [float(y)]
-    elif isinstance(y, list):
-        out = [float(v) for v in y]
     else:
-        try:
-            out = list(map(float, y))
-        except Exception:
-            raise HTTPException(status_code=500, detail="Model returned unsupported output format")
+        out = [float(o) for o in y]
 
     if isinstance(out, float):
         out = [out]

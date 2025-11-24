@@ -1,104 +1,158 @@
 # backend/ai-service/app/services/model_loader.py
 import os
+import traceback
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from dotenv import load_dotenv
 
-load_dotenv()  # read .env in project root
+load_dotenv()
 
-# Configurable via .env
-MODEL_PATH = os.environ.get("MODEL_PATH", "model.pt")
-MODEL_INPUT_SIZE = int(os.environ.get("MODEL_INPUT_SIZE", "3"))
-MAP_LOCATION = os.environ.get("TORCH_MAP_LOCATION", "cpu")  # usually 'cpu' for server
+# -------------------------------
+# Configuration
+# -------------------------------
+MODEL_PATH = os.environ.get("MODEL_PATH", "password_model.pt")
+MODEL_INPUT_SIZE = int(os.environ.get("MODEL_INPUT_SIZE", "4"))  # feature count used by PasswordModel
+PHISHING_MODEL_NAME = os.environ.get("PHISHING_MODEL", "facebook/bart-large-mnli")
+MAP_LOCATION = os.environ.get("TORCH_MAP_LOCATION", "cpu")
 
-class SimpleModel(nn.Module):
-    """
-    Minimal architecture used ONLY when the file at MODEL_PATH is a state_dict.
-    This is not training code — it's only here so we can load state_dicts.
-    If you have a full serialized Module or a scripted model, that will be used instead.
-    """
-    def __init__(self, input_size: int = MODEL_INPUT_SIZE, output_size: int = 1):
+# Try to import transformers.pipeline if available
+try:
+    from transformers import pipeline
+    _HF_AVAILABLE = True
+except Exception:
+    pipeline = None
+    _HF_AVAILABLE = False
+
+# -------------------------------
+# Password Strength Model
+# -------------------------------
+class PasswordModel(nn.Module):
+    def __init__(self, input_size: int = MODEL_INPUT_SIZE, hidden_size: int = 8, output_size: int = 3):
         super().__init__()
-        self.linear = nn.Linear(input_size, output_size)
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        return self.linear(x)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
 
-def _load_torchscript(path: str):
-    """Try to load a scripted/traced model (torch.jit)."""
+def _try_torchscript_load(path: str):
     try:
         model = torch.jit.load(path, map_location=MAP_LOCATION)
+        model.eval()
+        print(f"✅ Loaded TorchScript model from '{path}'")
         return model
     except Exception:
         return None
 
-def _load_torch_object(path: str):
-    """
-    Try to torch.load the file. The file may be:
-      - an nn.Module instance (saved with torch.save(model))
-      - a state_dict (dict)
-    """
+def _try_torch_load(path: str):
     try:
         obj = torch.load(path, map_location=MAP_LOCATION)
         return obj
     except Exception:
         return None
 
-def load_model():
+def load_password_model(path: str = MODEL_PATH):
     """
-    Robust loader:
-      1. try torch.jit.load (scripted/traced model)
-      2. try torch.load -> if Module instance, use it
-      3. if dict (state_dict), instantiate SimpleModel and load state dict
-      4. otherwise raise informative error
+    Load a password model. Order:
+      1) torch.jit.load (scripted/traced)
+      2) torch.load -> nn.Module instance
+      3) torch.load -> state_dict (load into PasswordModel)
+      4) fallback: return untrained PasswordModel
     """
-    path = MODEL_PATH
-    if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"Model file not found at '{path}'.\n"
-            "Please place your PyTorch model there (scripted model, saved Module, or state_dict).\n"
-            "Set MODEL_PATH in .env if using another filename."
-        )
+    if os.path.exists(path):
+        # 1) try TorchScript
+        ts = _try_torchscript_load(path)
+        if ts is not None:
+            return ts
 
-    # 1) Try TorchScript
-    ts_model = _load_torchscript(path)
-    if ts_model is not None:
-        ts_model.eval()
-        print(f"✅ Loaded TorchScript model from '{path}'")
-        return ts_model
+        # 2) try torch.load
+        obj = _try_torch_load(path)
+        if obj is None:
+            print(f"⚠️ Could not load model file '{path}' with torch.jit or torch.load. Using fresh model.")
+            return PasswordModel(input_size=MODEL_INPUT_SIZE)
 
-    # 2) Try regular torch.load
-    obj = _load_torch_object(path)
-    if obj is None:
-        raise RuntimeError(
-            f"Failed to load model using torch.jit.load and torch.load for file '{path}'. "
-            "Ensure the file is a valid PyTorch scripted model, saved Module, or a state_dict."
-        )
+        # If obj is nn.Module
+        if isinstance(obj, nn.Module):
+            obj.eval()
+            print(f"✅ Loaded nn.Module instance from '{path}'")
+            return obj
 
-    # If torch.load returned an nn.Module instance
-    if isinstance(obj, nn.Module):
-        obj.eval()
-        print(f"✅ Loaded nn.Module object from '{path}'")
-        return obj
+        # If obj is state_dict
+        if isinstance(obj, dict):
+            model = PasswordModel(input_size=MODEL_INPUT_SIZE)
+            try:
+                model.load_state_dict(obj)
+                model.eval()
+                print(f"✅ Loaded state_dict into PasswordModel (input_size={MODEL_INPUT_SIZE})")
+                return model
+            except Exception as e:
+                print(f"⚠️ Failed to load state_dict into PasswordModel: {e}\nFalling back to fresh model.")
+                return PasswordModel(input_size=MODEL_INPUT_SIZE)
 
-    # If torch.load returned a state_dict (dict)
-    if isinstance(obj, dict):
-        # instantiate a matching architecture and try to load
-        print(f"ℹ️  Loaded state_dict from '{path}', attempting to load into SimpleModel(input_size={MODEL_INPUT_SIZE})")
-        model = SimpleModel(input_size=MODEL_INPUT_SIZE)
-        try:
-            model.load_state_dict(obj)
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to load provided state_dict into SimpleModel (input_size={MODEL_INPUT_SIZE}). "
-                f"This usually means the saved state_dict uses a different architecture. Error: {e}"
-            )
+        # Unknown object type
+        print(f"⚠️ torch.load returned unsupported type {type(obj)} for '{path}'. Using fresh model.")
+        return PasswordModel(input_size=MODEL_INPUT_SIZE)
+    else:
+        print(f"ℹ️ No password model file at '{path}'. Using untrained PasswordModel.")
+        return PasswordModel(input_size=MODEL_INPUT_SIZE)
+
+def extract_password_features(password: str):
+    length = len(password)
+    digits = sum(c.isdigit() for c in password)
+    symbols = sum(not c.isalnum() for c in password)
+    upper = sum(c.isupper() for c in password)
+    # normalize or scale here if you later train a model requiring scaled inputs
+    return torch.tensor([[length, digits, symbols, upper]], dtype=torch.float)
+
+def predict_password_strength(model, password: str) -> str:
+    """
+    Returns one of: "weak", "medium", "strong".
+    Falls back to heuristic on any failure.
+    """
+    try:
+        features = extract_password_features(password)
         model.eval()
-        print(f"✅ Loaded state_dict into SimpleModel and ready.")
-        return model
+        with torch.no_grad():
+            logits = model(features)
+            if isinstance(logits, torch.Tensor):
+                pred = int(torch.argmax(logits, dim=1).item())
+                label = ["weak", "medium", "strong"][max(0, min(2, pred))]
+                return label
+            else:
+                # unexpected output
+                raise RuntimeError("Model returned non-tensor output")
+    except Exception as e:
+        print(f"⚠️ predict_password_strength failed: {e}")
+        traceback.print_exc()
+        # fallback heuristic
+        pw = password or ""
+        if len(pw) >= 12 and any(c.isupper() for c in pw) and any(c.isdigit() for c in pw) and any(not c.isalnum() for c in pw):
+            return "strong"
+        if len(pw) >= 8:
+            return "medium"
+        return "weak"
 
-    # Unknown object returned
-    raise RuntimeError(
-        f"torch.load returned object of unsupported type {type(obj)} for file '{path}'. "
-        "Expected torchscript, nn.Module, or state_dict(dict)."
-    )
+# -------------------------------
+# Phishing Detection (optional HF pipeline)
+# -------------------------------
+def load_phishing_model(model_name: str = PHISHING_MODEL_NAME):
+    """
+    Load a Hugging Face zero-shot classification model for phishing detection.
+    Returns a transformers pipeline or None if HF not available.
+    """
+    if not _HF_AVAILABLE:
+        print("⚠️ Hugging Face transformers not available. Phishing detection disabled.")
+        return None
+
+    try:
+        model = pipeline("zero-shot-classification", model=model_name)
+        print(f"✅ Loaded phishing detection model '{model_name}'")
+        return model
+    except Exception as e:
+        print(f"⚠️ Failed to load phishing model '{model_name}': {e}")
+        return None
+
+# Initialize phishing model
+phishing_model = load_phishing_model()

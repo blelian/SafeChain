@@ -3,8 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from app.routes import api, infer, auth, password, phishing, anomaly, audit, events
-from app.services.model_loader import load_model
-from app.services import ai_service
+from app.services import model_loader  # updated import (module loads models)
 from app.db import engine, Base
 
 # Load environment variables
@@ -22,25 +21,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# ---------- CORS (Required for Next.js) ----------
+# ---------- CORS (allow frontend) ----------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:4000", "http://localhost:5173", "http://localhost:3001", "http://localhost:3002", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 # -------------------------------------------------
 
-# Startup event: load AI model
+# Startup event: ensure models are loaded (model_loader imports handle loading)
 @app.on_event("startup")
 async def startup_event():
     try:
-        model = load_model()
-        ai_service.set_model(model)
-        print("✅ AI model loaded successfully")
+        # Access attributes to ensure module loaded; they print their own status
+        pm = getattr(model_loader, "password_model", None)
+        ph = getattr(model_loader, "phishing_model", None)
+        print(f"ℹ️ Password model loaded? {'yes' if pm is not None else 'no'}")
+        print(f"ℹ️ Phishing model loaded? {'yes' if ph is not None else 'no'}")
+        print("✅ Model loader initialized")
     except Exception as e:
-        print(f"❌ Failed to load AI model: {e}")
+        print(f"❌ Failed to initialize model loader: {e}")
 
 # Health check
 @app.get("/")
