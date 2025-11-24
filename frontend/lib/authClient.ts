@@ -1,3 +1,4 @@
+// frontend/lib/authClient.ts
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 let token: string | null = null;
@@ -5,59 +6,57 @@ let token: string | null = null;
 // Load token from localStorage if in browser
 if (typeof window !== "undefined") {
   token = localStorage.getItem("token");
-  console.log("[authClient] Loaded token from localStorage:", token);
 }
 
 export const authClient = {
-  register: async (email: string, password: string): Promise<boolean> => {
+  register: async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      console.log("[authClient] Registering user:", email);
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // allow cookies
       });
-      const text = await res.text();
-      console.log("[authClient] Register response:", res.status, text);
-      return res.ok;
-    } catch (err) {
-      console.error("[authClient] Register error:", err);
-      return false;
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, message: errData.detail || "Registration failed" };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Network error" };
     }
   },
 
-  login: async (email: string, password: string): Promise<boolean> => {
+  login: async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      console.log("[authClient] Logging in user:", email);
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // allow cookies
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const txt = await res.text();
-        console.warn("[authClient] Login failed:", res.status, txt);
-        return false;
+        return { success: false, message: data.detail || "Login failed" };
       }
 
-      const data: { access_token: string; token_type: string } = await res.json();
       token = data.access_token;
-      console.log("[authClient] Login success, token:", token);
 
       if (typeof window !== "undefined") {
         localStorage.setItem("token", token);
       }
 
-      return true;
-    } catch (err) {
-      console.error("[authClient] Login error:", err);
-      return false;
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Network error" };
     }
   },
 
   logout: () => {
-    console.log("[authClient] Logging out");
     token = null;
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
