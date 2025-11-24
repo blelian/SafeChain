@@ -1,4 +1,3 @@
-// frontend/pages/infer.tsx
 import { useState } from "react";
 import { authClient } from "../lib/authClient";
 import RustDemoButton from "../components/rust_demo"; // Rust demo component (optional)
@@ -16,9 +15,10 @@ export default function InferPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  // Use correct env variable
+  const API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
 
-  // quick heuristic (gives immediate visual feedback while waiting for backend)
+  // quick heuristic for immediate feedback
   const heuristic = (pw: string): BackendResult => {
     if (!pw) return { strength: undefined };
     if (pw.length < 8) return { strength: "weak", reasons: ["Too short"], suggestions: ["Make it longer"] };
@@ -30,16 +30,15 @@ export default function InferPage() {
     setErr(null);
     setLoading(true);
 
-    // show heuristic immediately so the bar moves right away
     setResult(heuristic(password));
 
     try {
-      // build headers, avoid sending Authorization if empty
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const ah = authClient.authHeader();
       if (ah.Authorization) headers.Authorization = ah.Authorization;
 
-      console.log("[Infer] POST", `${API_URL}/api/password/check`, { password, user_id: null });
+      console.log("[Infer] POST URL:", `${API_URL}/api/password/check`);
+      console.log("[Infer] Payload:", { password, user_id: null });
 
       const res = await fetch(`${API_URL}/api/password/check`, {
         method: "POST",
@@ -66,20 +65,14 @@ export default function InferPage() {
     }
   };
 
-  // gradient css via inline style (works regardless of tailwind classes)
   const getStrengthBarStyle = (): React.CSSProperties => {
     if (!result?.strength) return { width: "0%", background: "linear-gradient(to right, #94a3b8, #64748b)" };
-
     const s = String(result.strength).toLowerCase();
     switch (s) {
-      case "weak":
-        return { width: "33%", background: "linear-gradient(to right, #f87171, #f43f5e)" };
-      case "medium":
-        return { width: "66%", background: "linear-gradient(to right, #facc15, #fbbf24)" };
-      case "strong":
-        return { width: "100%", background: "linear-gradient(to right, #4ade80, #16a34a)" };
-      default:
-        return { width: "0%", background: "linear-gradient(to right, #94a3b8, #64748b)" };
+      case "weak": return { width: "33%", background: "linear-gradient(to right, #f87171, #f43f5e)" };
+      case "medium": return { width: "66%", background: "linear-gradient(to right, #facc15, #fbbf24)" };
+      case "strong": return { width: "100%", background: "linear-gradient(to right, #4ade80, #16a34a)" };
+      default: return { width: "0%", background: "linear-gradient(to right, #94a3b8, #64748b)" };
     }
   };
 
@@ -116,9 +109,7 @@ export default function InferPage() {
             <div className="h-4 transition-all duration-700" style={getStrengthBarStyle()} />
           </div>
           <div className="flex items-center justify-between text-xs text-gray-300 mt-2">
-            <span>
-              Strength: <b className="text-white ml-1">{result?.strength ?? "—"}</b>
-            </span>
+            <span>Strength: <b className="text-white ml-1">{result?.strength ?? "—"}</b></span>
             <span>{result ? `${result.reasons?.length ?? 0} issues` : ""}</span>
           </div>
         </div>

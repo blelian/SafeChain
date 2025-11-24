@@ -1,4 +1,3 @@
-// frontend/components/rust_demo.tsx
 import { useState } from "react";
 
 export default function RustDemoButton() {
@@ -9,30 +8,28 @@ export default function RustDemoButton() {
     setLoading(true);
     setOutput(null);
     try {
-      // Minimal Rust backend URL
-      const RUST_API_URL = process.env.NEXT_PUBLIC_RUST_API_URL || "http://localhost:9000";
-      
+      // Use correct env variable
+      const RUST_API_URL = process.env.NEXT_PUBLIC_RUST_URL || "http://localhost:9000";
+      console.log("[RustDemo] GET URL:", RUST_API_URL);
+
       const res = await fetch(RUST_API_URL, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!res.ok) {
         setOutput(`Error: ${res.status}`);
       } else {
         const text = await res.text();
-        // Minimal backend returns raw JSON string, parse it safely
         try {
           const data = JSON.parse(text);
           setOutput(data.message || JSON.stringify(data));
         } catch {
-          setOutput(text); // fallback if not valid JSON
+          setOutput(text);
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error("[RustDemo] Error:", err);
       setOutput("Rust backend not reachable");
     } finally {
       setLoading(false);
