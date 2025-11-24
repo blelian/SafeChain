@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "SafeChain Next.js frontend with TypeScript and TailwindCSS",
   "main": "index.js",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "preinstall": "corepack prepare pnpm@10.23.0 --activate",
     "dev": "next dev",
