@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { authClient } from "../lib/authClient";
-import RustDemoButton from "../components/rust_demo"; // Rust demo component (optional)
 
 type BackendResult = {
   password?: string;
@@ -15,7 +14,7 @@ export default function InferPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Use correct env variable
+  // Use correct env variable for FastAPI
   const API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
 
   // quick heuristic for immediate feedback
@@ -29,7 +28,6 @@ export default function InferPage() {
   const check = async () => {
     setErr(null);
     setLoading(true);
-
     setResult(heuristic(password));
 
     try {
@@ -50,7 +48,6 @@ export default function InferPage() {
         const txt = await res.text().catch(() => "");
         console.error("[Infer] server error:", res.status, txt);
         setErr(`Server error ${res.status}`);
-        setLoading(false);
         return;
       }
 
@@ -152,6 +149,61 @@ export default function InferPage() {
           <button onClick={() => { authClient.logout(); window.location.href = "/login"; }} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500">Logout</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// RustDemoButton Component
+export function RustDemoButton() {
+  const [output, setOutput] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchRustOutput = async () => {
+    setLoading(true);
+    setOutput(null);
+    try {
+      const RUST_API_URL = process.env.NEXT_PUBLIC_RUST_URL || "https://rust-service-e4hc.onrender.com";
+      console.log("[RustDemo] Fetching from:", RUST_API_URL);
+
+      const res = await fetch(RUST_API_URL, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        setOutput(`Error: ${res.status}`);
+      } else {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          setOutput(data.message || JSON.stringify(data));
+        } catch {
+          setOutput(text);
+        }
+      }
+    } catch (err) {
+      console.error("[RustDemo] Error:", err);
+      setOutput("Rust backend not reachable (check console)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 text-center">
+      <button
+        onClick={fetchRustOutput}
+        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold"
+        disabled={loading}
+      >
+        {loading ? "Fetching..." : "Show Rust Output"}
+      </button>
+
+      {output && (
+        <div className="mt-4 p-3 bg-black/20 rounded text-gray-200 break-words">
+          {output}
+        </div>
+      )}
     </div>
   );
 }
