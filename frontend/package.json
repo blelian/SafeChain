@@ -1,14 +1,13 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-  "description": "SafeChain Next.js frontend with TypeScript, TailwindCSS, and Capacitor",
+  "description": "SafeChain Next.js frontend with TypeScript and TailwindCSS",
   "main": "index.js",
   "scripts": {
     "preinstall": "corepack prepare pnpm@10.23.0 --activate",
     "dev": "next dev",
     "build": "next build",
     "export": "next export",
-    "build:capacitor": "next build && next export",
     "start": "next start",
     "lint": "next lint"
   },
@@ -16,15 +15,12 @@
     "safechain",
     "nextjs",
     "tailwindcss",
-    "typescript",
-    "capacitor"
+    "typescript"
   ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.23.0",
   "dependencies": {
-    "@capacitor/cli": "^7.4.4",
-    "@capacitor/core": "^7.4.4",
     "@types/node": "^24.10.0",
     "next": "^16.0.1",
     "react": "^19.2.0",
