@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { authClient } from "../lib/authClient";
 import { useRouter } from "next/router";
 
@@ -9,50 +9,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // optional: redirect if already logged in
-  useEffect(() => {
-    if (typeof window !== "undefined" && authClient.getToken()) {
-      router.push("/infer");
-    }
-  }, [router]);
-
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const { success, message } = await authClient.login(email, password) as any;
-      if (success) {
-        router.push("/infer");
-      } else {
-        setError(message || "Login failed");
-      }
-    } catch (err) {
-      console.error("[Login] Error:", err);
-      setError("Login error — check console");
-    } finally {
-      setLoading(false);
-    }
+    const success = await authClient.login(email, password);
+    setLoading(false);
+    if (success) router.push("/infer");
+    else setError("Login failed");
   };
 
   const handleRegister = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const { success, message } = await authClient.register(email, password) as any;
-      if (success) {
-        // login directly without calling handleLogin
-        const { success: loginSuccess, message: loginMessage } = await authClient.login(email, password) as any;
-        if (loginSuccess) router.push("/infer");
-        else setError(loginMessage || "Login failed after registration");
-      } else {
-        setError(message || "Registration failed (maybe email already exists)");
-      }
-    } catch (err) {
-      console.error("[Register] Error:", err);
-      setError("Registration error — check console");
-    } finally {
-      setLoading(false);
-    }
+    const success = await authClient.register(email, password);
+    setLoading(false);
+    if (success) await handleLogin();
+    else setError("Registration failed (maybe email already exists)");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,7 +53,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none min-w-0"
                 required
               />
             </div>
@@ -95,7 +67,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
+                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none min-w-0"
                 required
               />
             </div>
@@ -124,7 +96,7 @@ export default function LoginPage() {
 
           {error && (
             <div className="mt-4 text-center">
-              <p className="text-red-500 break-words">{error}</p>
+              <p className="text-red-500">{error}</p>
             </div>
           )}
         </form>
