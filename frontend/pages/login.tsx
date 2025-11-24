@@ -1,4 +1,3 @@
-// frontend/pages/login.tsx
 import { useState } from "react";
 import { authClient } from "../lib/authClient";
 import { useRouter } from "next/router";
@@ -7,18 +6,23 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
+    setLoading(true);
     setError(null);
     const success = await authClient.login(email, password);
+    setLoading(false);
     if (success) router.push("/infer");
     else setError("Login failed");
   };
 
   const handleRegister = async () => {
+    setLoading(true);
     setError(null);
     const success = await authClient.register(email, password);
+    setLoading(false);
     if (success) await handleLogin();
     else setError("Registration failed (maybe email already exists)");
   };
@@ -31,7 +35,6 @@ export default function LoginPage() {
   return (
     <div className="page-container bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-800 p-4">
       <div className="card max-w-md w-full p-8 space-y-6 text-center">
-        {/* Homepage Link */}
         <button
           onClick={() => router.push("/")}
           className="text-sm text-emerald-300 hover:underline mb-2 self-start"
@@ -42,7 +45,6 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold text-emerald-400 mb-4">Login / Register</h1>
 
         <form onSubmit={handleSubmit} className="w-full">
-          {/* Grid rows: single column on small screens, 12-cols on md+ */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3">
             <label className="md:col-span-3 md:text-right text-sm text-gray-300">Email</label>
             <div className="md:col-span-9">
@@ -69,21 +71,22 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Buttons row aligned to input column on md+ screens */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-4">
             <div className="md:col-start-4 md:col-span-9 flex flex-col md:flex-row gap-3">
               <button
                 type="submit"
-                className="flex-1 w-full md:w-auto py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold transition-all"
+                disabled={loading}
+                className="flex-1 w-full md:w-auto py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold transition-all disabled:opacity-50"
               >
-                Login
+                {loading ? "Logging in..." : "Login"}
               </button>
               <button
                 type="button"
+                disabled={loading}
                 onClick={handleRegister}
-                className="flex-1 w-full md:w-auto py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all"
+                className="flex-1 w-full md:w-auto py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all disabled:opacity-50"
               >
-                Register
+                {loading ? "Registering..." : "Register"}
               </button>
             </div>
           </div>
