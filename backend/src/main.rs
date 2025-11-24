@@ -1,21 +1,44 @@
-mod routes;
+// backend/src/main.rs
+use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
 
-use axum::{Router, routing::get};
-use std::net::SocketAddr;
+fn handle_stream(mut stream: TcpStream) {
+    // Read the request (we don't fully parse it; just drain the socket)
+    let mut buf = [0u8; 1024];
+    let _ = stream.read(&mut buf);
 
-#[tokio::main]
-async fn main() {
-    // Root route for testing
-    let app = Router::new()
-        .route("/", get(|| async { "Rust backend is running!" }))
-        .nest("/api", routes::api::create_router())
-        .nest("/api/auth", routes::auth::create_router())
-        .nest("/api/infer", routes::infer::create_router());
+    let body = r#"{"message":"Rust backend is running!"}"#;
+    let response = format!(
+        "HTTP/1.1 200 OK\r\n\
+         Content-Type: application/json\r\n\
+         Access-Control-Allow-Origin: *\r\n\
+         Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
+         Access-Control-Allow-Headers: Content-Type\r\n\
+         Content-Length: {}\r\n\
+         Connection: close\r\n\
+         \r\n\
+         {}",
+        body.len(),
+        body
+    );
 
-    let addr: SocketAddr = "0.0.0.0:9000".parse().unwrap();
-    println!("🚀 Rust server running on {addr}");
+    let _ = stream.write_all(response.as_bytes());
+    let _ = stream.flush();
+}
 
-    axum::serve(tokio::net::TcpListener::bind(addr).await.unwrap(), app)
-        .await
-        .unwrap();
+fn main() -> std::io::Result<()> {
+    // Bind to 0.0.0.0 so it accepts requests from localhost and other interfaces
+    let listener = TcpListener::bind("0.0.0.0:9000")?;
+    println!("🚀 Rust backend running on 0.0.0.0:9000");
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(s) => {
+                // handle in thread so server stays responsive
+                std::thread::spawn(|| handle_stream(s));
+            }
+            Err(e) => eprintln!("Connection failed: {}", e),
+        }
+    }
+    Ok(())
 }

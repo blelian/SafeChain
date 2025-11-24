@@ -1,55 +1,87 @@
 // frontend/pages/infer.tsx
 import { useState } from "react";
 import { authClient } from "../lib/authClient";
-import RustDemoButton from "../components/rust_demo"; // <-- import Rust demo component
+import RustDemoButton from "../components/rust_demo"; // Rust demo component (optional)
 
-const strengthColor = {
-  weak: "from-red-500 to-rose-500",
-  medium: "from-amber-400 to-yellow-500",
-  strong: "from-emerald-400 to-green-600",
-  unknown: "from-slate-400 to-slate-600",
+type BackendResult = {
+  password?: string;
+  strength?: string;
+  reasons?: string[];
+  suggestions?: string[];
 };
 
 export default function InferPage() {
   const [password, setPassword] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<BackendResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+  // quick heuristic (gives immediate visual feedback while waiting for backend)
+  const heuristic = (pw: string): BackendResult => {
+    if (!pw) return { strength: undefined };
+    if (pw.length < 8) return { strength: "weak", reasons: ["Too short"], suggestions: ["Make it longer"] };
+    if (pw.length < 12) return { strength: "medium", reasons: ["Short length"], suggestions: ["Consider using 12+ characters"] };
+    return { strength: "strong", reasons: [], suggestions: ["Looks good — use a passphrase or password manager"] };
+  };
+
   const check = async () => {
     setErr(null);
     setLoading(true);
-    setResult(null);
+
+    // show heuristic immediately so the bar moves right away
+    setResult(heuristic(password));
+
     try {
+      // build headers, avoid sending Authorization if empty
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const ah = authClient.authHeader();
+      if (ah.Authorization) headers.Authorization = ah.Authorization;
+
+      console.log("[Infer] POST", `${API_URL}/api/password/check`, { password, user_id: null });
+
       const res = await fetch(`${API_URL}/api/password/check`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authClient.authHeader(),
-        },
+        headers,
         body: JSON.stringify({ password, user_id: null }),
       });
 
       if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        console.error("[Infer] server error:", res.status, txt);
         setErr(`Server error ${res.status}`);
         setLoading(false);
         return;
       }
 
-      const data = await res.json();
+      const data: BackendResult = await res.json();
+      console.log("[Infer] backend response:", data);
       setResult(data);
-    } catch (e) {
-      console.error(e);
-      setErr("Network error");
+    } catch (e: any) {
+      console.error("[Infer] network/error:", e);
+      setErr("Network error (check console & server)");
     } finally {
       setLoading(false);
     }
   };
 
-  const colorClass =
-    result?.strength ? strengthColor[result.strength] ?? strengthColor.unknown : "from-slate-300 to-slate-500";
+  // gradient css via inline style (works regardless of tailwind classes)
+  const getStrengthBarStyle = (): React.CSSProperties => {
+    if (!result?.strength) return { width: "0%", background: "linear-gradient(to right, #94a3b8, #64748b)" };
+
+    const s = String(result.strength).toLowerCase();
+    switch (s) {
+      case "weak":
+        return { width: "33%", background: "linear-gradient(to right, #f87171, #f43f5e)" };
+      case "medium":
+        return { width: "66%", background: "linear-gradient(to right, #facc15, #fbbf24)" };
+      case "strong":
+        return { width: "100%", background: "linear-gradient(to right, #4ade80, #16a34a)" };
+      default:
+        return { width: "0%", background: "linear-gradient(to right, #94a3b8, #64748b)" };
+    }
+  };
 
   return (
     <div className="page-container bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-800 p-4">
@@ -57,7 +89,7 @@ export default function InferPage() {
         <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-emerald-300">SafeChain — Password Tester</h1>
         <p className="text-sm text-gray-300 mb-6">Real AI-powered feedback. Strength meter updates in real-time.</p>
 
-        {/* Password Input */}
+        {/* Input */}
         <div className="mb-4">
           <label className="block text-xs text-gray-300 mb-2">Enter password</label>
           <div className="flex gap-2">
@@ -78,21 +110,10 @@ export default function InferPage() {
           </div>
         </div>
 
-        {/* Strength Bar */}
+        {/* Strength bar */}
         <div className="mb-4">
           <div className="h-4 rounded-full overflow-hidden bg-black/30 border border-black/40">
-            <div
-              className={`h-4 transition-all duration-700 bg-gradient-to-r ${colorClass}`}
-              style={{
-                width: result
-                  ? result.strength === "weak"
-                    ? "33%"
-                    : result.strength === "medium"
-                    ? "66%"
-                    : "100%"
-                  : "0%",
-              }}
-            />
+            <div className="h-4 transition-all duration-700" style={getStrengthBarStyle()} />
           </div>
           <div className="flex items-center justify-between text-xs text-gray-300 mt-2">
             <span>
@@ -102,63 +123,42 @@ export default function InferPage() {
           </div>
         </div>
 
-        {/* Suggestions and Reasons */}
+        {/* Suggestions & Reasons */}
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div className="p-4 rounded-lg bg-white/5">
             <h3 className="text-sm font-semibold mb-2">Reasons</h3>
             <ul className="list-disc list-inside text-sm text-gray-200">
-              {result?.reasons?.length
-                ? result.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)
-                : <li className="text-gray-500">No issues identified yet</li>}
+              {result?.reasons?.length ? result.reasons.map((r, i) => <li key={i}>{r}</li>) : <li className="text-gray-500">No issues identified yet</li>}
             </ul>
           </div>
           <div className="p-4 rounded-lg bg-white/5">
             <h3 className="text-sm font-semibold mb-2">Suggestions</h3>
             <ul className="list-disc list-inside text-sm text-gray-200">
-              {result?.suggestions?.length
-                ? result.suggestions.map((s: string, i: number) => <li key={i}>{s}</li>)
-                : <li className="text-gray-500">Type a password and press Check</li>}
+              {result?.suggestions?.length ? result.suggestions.map((s, i) => <li key={i}>{s}</li>) : <li className="text-gray-500">Type a password and press Check</li>}
             </ul>
           </div>
         </div>
 
-        {/* Raw result */}
+        {/* Raw response */}
         <div className="mt-4">
           <details className="text-sm text-gray-300">
             <summary className="cursor-pointer">Show raw response</summary>
-            <pre className="mt-2 p-3 bg-black/50 rounded text-xs text-gray-200 overflow-auto">
-              {result ? JSON.stringify(result, null, 2) : "—"}
-            </pre>
+            <pre className="mt-2 p-3 bg-black/50 rounded text-xs text-gray-200 overflow-auto">{result ? JSON.stringify(result, null, 2) : "—"}</pre>
           </details>
         </div>
 
         {err && <p className="mt-4 text-red-400">{err}</p>}
 
-        {/* Rust Demo Component */}
+        {/* Rust demo */}
         <div className="mt-6">
+          <h2 className="text-sm text-gray-300 mb-2 font-semibold">Rust Backend Demo</h2>
           <RustDemoButton />
         </div>
 
-        {/* Footer Buttons */}
+        {/* Footer */}
         <div className="mt-6 flex gap-3 justify-center">
-          <button
-            onClick={() => {
-              setPassword("");
-              setResult(null);
-            }}
-            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600"
-          >
-            Clear
-          </button>
-          <button
-            onClick={() => {
-              authClient.logout();
-              window.location.href = "/login";
-            }}
-            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500"
-          >
-            Logout
-          </button>
+          <button onClick={() => { setPassword(""); setResult(null); }} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">Clear</button>
+          <button onClick={() => { authClient.logout(); window.location.href = "/login"; }} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500">Logout</button>
         </div>
       </div>
     </div>
