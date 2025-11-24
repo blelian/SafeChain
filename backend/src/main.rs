@@ -1,9 +1,8 @@
-// backend/src/main.rs
+use std::env;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
 fn handle_stream(mut stream: TcpStream) {
-    // Read the request (we don't fully parse it; just drain the socket)
     let mut buf = [0u8; 1024];
     let _ = stream.read(&mut buf);
 
@@ -12,8 +11,6 @@ fn handle_stream(mut stream: TcpStream) {
         "HTTP/1.1 200 OK\r\n\
          Content-Type: application/json\r\n\
          Access-Control-Allow-Origin: *\r\n\
-         Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
-         Access-Control-Allow-Headers: Content-Type\r\n\
          Content-Length: {}\r\n\
          Connection: close\r\n\
          \r\n\
@@ -27,18 +24,20 @@ fn handle_stream(mut stream: TcpStream) {
 }
 
 fn main() -> std::io::Result<()> {
-    // Bind to 0.0.0.0 so it accepts requests from localhost and other interfaces
-    let listener = TcpListener::bind("0.0.0.0:9000")?;
-    println!("🚀 Rust backend running on 0.0.0.0:9000");
+    let port = env::var("PORT").unwrap_or_else(|_| "9000".into());
+    let addr = format!("0.0.0.0:{}", port);
+
+    let listener = TcpListener::bind(&addr)?;
+    println!("🚀 Rust backend running on {}", addr);
 
     for stream in listener.incoming() {
         match stream {
             Ok(s) => {
-                // handle in thread so server stays responsive
                 std::thread::spawn(|| handle_stream(s));
             }
             Err(e) => eprintln!("Connection failed: {}", e),
         }
     }
+
     Ok(())
 }
