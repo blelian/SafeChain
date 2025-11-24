@@ -4,6 +4,7 @@
   "description": "SafeChain Next.js frontend with TypeScript, TailwindCSS, and Capacitor",
   "main": "index.js",
   "scripts": {
+    "preinstall": "corepack prepare pnpm@10.23.0 --activate",
     "dev": "next dev",
     "build": "next build",
     "export": "next export",
