@@ -3,20 +3,16 @@ import { authClient } from "../lib/authClient";
 import { useRouter } from "next/router";
 
 export default function LoginPage() {
-  console.log("LoginPage — v2 loaded"); // marker to confirm deployed bundle
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // optional: if user already logged in, redirect (keeps behaviour)
   useEffect(() => {
     if (typeof window !== "undefined" && authClient.getToken()) {
       router.push("/infer");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogin = async () => {
@@ -24,7 +20,7 @@ export default function LoginPage() {
     setError(null);
     const { success, message } = await authClient.login(email, password) as any;
     setLoading(false);
-    if (success || success === true) router.push("/infer");
+    if (success) router.push("/infer");
     else setError(message || "Login failed");
   };
 
@@ -43,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="page-container bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-800 p-4">
+    <div className="page-container bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-800 p-4 min-h-screen flex items-center justify-center">
       <div className="card max-w-md w-full p-8 space-y-6 text-center">
         <button
           onClick={() => router.push("/")}
@@ -63,7 +59,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none min-w-0"
+                className="w-full min-w-0 box-border p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
                 required
               />
             </div>
@@ -77,7 +73,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none min-w-0"
+                className="w-full min-w-0 box-border p-3 rounded-lg bg-black/20 placeholder-gray-400 focus:ring-emerald-400 focus:outline-none"
                 required
               />
             </div>
